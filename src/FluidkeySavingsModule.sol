@@ -40,8 +40,8 @@ contract FluidkeySavingsModule {
 
     error TooManyTokens();
     error ModuleNotInitialized(address account);
-    error TokenNotUnderlying(address token);
     error NotAuthorized(address relayer);
+    error ConfigNotFound(address token);
 
     uint256 internal constant MAX_TOKENS = 100;
     address public immutable WETH = 0x4200000000000000000000000000000000000006; // weth on Base
@@ -230,7 +230,7 @@ contract FluidkeySavingsModule {
 
         // check if the config exists and revert if not
         if (address(vault) == address(0)) {
-            revert ModuleNotInitialized(safe);
+            revert ConfigNotFound(token);
         }
 
         IERC20 tokenToSave;
@@ -238,7 +238,7 @@ contract FluidkeySavingsModule {
         // if token is ETH, wrap it
         if (token == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE)) {
             safeInstance.execTransactionFromModule(
-                address(WETH), 0, abi.encodeWithSelector(IWETH.deposit.selector, amountReceived), 0
+                address(WETH), amountReceived, abi.encodeWithSelector(IWETH.deposit.selector), 0
             );
             tokenToSave = IERC20(WETH);
         } else {

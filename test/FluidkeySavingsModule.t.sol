@@ -2,8 +2,6 @@
 pragma solidity ^0.8.23;
 
 import { Test } from "forge-std/Test.sol";
-import { StdCheats } from "forge-std/StdCheats.sol";
-import "safe-tools/SafeTestTools.sol";
 import { FluidkeySavingsModule } from "../src/FluidkeySavingsModule.sol";
 import { SafeModuleSetup } from "../src/SafeModuleSetup.sol";
 import { MultiSend } from "../lib/safe-tools/lib/safe-contracts/contracts/libraries/MultiSend.sol";
@@ -12,7 +10,7 @@ import { SafeProxyFactory } from
 import { Safe } from "../lib/safe-tools/lib/safe-contracts/contracts/Safe.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
-import { ud2x18 } from "@prb/math/UD2x18.sol";
+import { SENTINEL } from "sentinellist/SentinelList.sol";
 
 contract FluidkeySavingsModuleTest is Test {
     // Contracts
@@ -23,16 +21,19 @@ contract FluidkeySavingsModuleTest is Test {
 
     // ERC20 contracts on Base
     IERC20 public USDC = IERC20(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+    address public ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     IERC4626 public RE7_USDC_ERC4626 = IERC4626(0x12AFDeFb2237a5963e7BAb3e2D46ad0eee70406e);
+    IERC4626 public GAUNTLET_WETH_ERC4626 = IERC4626(0x6b13c060F13Af1fdB319F52315BbbF3fb1D88844);
+    IERC4626 public STEAKHOUSE_USDC_ERC4626 = IERC4626(0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183);
 
-    address owner;
-    address[] ownerAddresses;
-    address authorizedRelayer;
-    address safe;
-    bytes moduleInitData;
-    bytes moduleSettingData;
-    bytes moduleData;
-    uint256 baseFork;
+    address internal owner;
+    address[] internal ownerAddresses;
+    address internal authorizedRelayer;
+    address internal safe;
+    bytes internal moduleInitData;
+    bytes internal moduleSettingData;
+    bytes internal moduleData;
+    uint256 internal baseFork;
 
     function setUp() public {
         // Create a fork on Base
@@ -55,14 +56,19 @@ contract FluidkeySavingsModuleTest is Test {
         modules[0] = address(module);
         moduleInitData = abi.encodeWithSelector(safeModuleSetup.enableModules.selector, modules);
         uint256 moduleInitDataLength = moduleInitData.length;
+
         // Create a dynamic array of ConfigWithToken
         FluidkeySavingsModule.ConfigWithToken[] memory configs =
-            new FluidkeySavingsModule.ConfigWithToken[](1);
+            new FluidkeySavingsModule.ConfigWithToken[](2);
 
         // Populate the array
         configs[0] = FluidkeySavingsModule.ConfigWithToken({
             token: address(USDC),
             vault: address(RE7_USDC_ERC4626)
+        });
+        configs[1] = FluidkeySavingsModule.ConfigWithToken({
+            token: address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE),
+            vault: address(GAUNTLET_WETH_ERC4626)
         });
 
         moduleSettingData = abi.encodeWithSelector(module.onInstall.selector, abi.encode(configs));
@@ -103,16 +109,29 @@ contract FluidkeySavingsModuleTest is Test {
         );
     }
 
-    function test_Deployment() public {
-        // check that the module is initialized
+    function test_Deployment() public view {
         bool isInitialized = module.isInitialized(safe);
         assertEq(isInitialized, true, "1: Module is not initialized");
     }
 
-    function test_AutoSaveWithRelayer() public {
+    function test_AutoSaveWithRelayerErc20() public {
         deal(address(USDC), safe, 100_000_000);
         vm.startPrank(authorizedRelayer);
-        module.autoSave(address(USDC), 100, safe);
+        module.autoSave(address(USDC), 100_000_000, safe);
+        uint256 balance = USDC.balanceOf(safe);
+        assertEq(balance, 0, "1: USDC balance is not correct");
+        uint256 balanceOfVault = RE7_USDC_ERC4626.balanceOf(safe);
+        assertGt(balanceOfVault, 0, "2: USDC balance of vault is 0");
+    }
+
+    function test_AutoSaveWithRelayerEth() public {
+        deal(safe, 1 ether);
+        vm.startPrank(authorizedRelayer);
+        module.autoSave(ETH, 1 ether, safe);
+        uint256 balance = address(safe).balance;
+        assertEq(balance, 0, "1: ETH balance is not correct");
+        uint256 balanceOfVault = GAUNTLET_WETH_ERC4626.balanceOf(safe);
+        assertGt(balanceOfVault, 0, "2: ETH balance of vault is 0");
     }
 
     function test_AutoSaveWithoutRelayer() public {
@@ -124,6 +143,30 @@ contract FluidkeySavingsModuleTest is Test {
                 FluidkeySavingsModule.NotAuthorized.selector, unauthorizedRelayer
             )
         );
-        module.autoSave(address(USDC), 100, safe);
+        module.autoSave(address(USDC), 100_000_000, safe);
+    }
+
+    function test_UpdateConfig() public {
+        vm.startPrank(safe);
+        module.setConfig(address(USDC), address(STEAKHOUSE_USDC_ERC4626));
+        vm.startPrank(authorizedRelayer);
+        deal(address(USDC), safe, 100_000_000);
+        module.autoSave(address(USDC), 100_000_000, safe);
+        uint256 balance = USDC.balanceOf(safe);
+        assertEq(balance, 0, "1: USDC balance is not correct");
+        uint256 balanceOfVault = STEAKHOUSE_USDC_ERC4626.balanceOf(safe);
+        assertGt(balanceOfVault, 0, "2: USDC balance of vault is 0");
+    }
+
+    function test_DeleteConfig() public {
+        address[] memory tokens = module.getTokens(safe);
+        vm.startPrank(safe);
+        module.deleteConfig(SENTINEL, tokens[0]);
+        vm.startPrank(authorizedRelayer);
+        deal(safe, 1 ether);
+        vm.expectRevert(
+            abi.encodeWithSelector(FluidkeySavingsModule.ConfigNotFound.selector, address(ETH))
+        );
+        module.autoSave(ETH, 1 ether, safe);
     }
 }
