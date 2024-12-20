@@ -25,7 +25,6 @@ interface Safe {
     )
         external
         returns (bool success);
-    function getOwners() external view returns (address[] memory);
 }
 
 interface IWETH {
@@ -40,7 +39,6 @@ contract FluidkeySavingsModule {
     //////////////////////////////////////////////////////////////////////////*/
 
     error TooManyTokens();
-    // error InvalidSqrtPriceLimitX96();
     error ModuleNotInitialized(address account);
     error TokenNotUnderlying(address token);
     error NotAuthorized(address relayer);
@@ -98,7 +96,6 @@ contract FluidkeySavingsModule {
 
         // decode the data to get the tokens and their configurations
         (ConfigWithToken[] memory _configs) = abi.decode(data, (ConfigWithToken[]));
-        // setSwapRouter(swapRouter);
 
         // initialize the sentinel list
         tokens[account].init();
@@ -127,8 +124,6 @@ contract FluidkeySavingsModule {
     function onUninstall(bytes calldata) external {
         // cache the account address
         address account = msg.sender;
-
-        // _deinitSwapRouter();
 
         // clear the configurations
         (address[] memory tokensArray,) = tokens[account].getEntriesPaginated(SENTINEL, MAX_TOKENS);
@@ -220,16 +215,7 @@ contract FluidkeySavingsModule {
      * @param token address of the token received
      * @param amountReceived amount received by the user
      */
-    function autoSave(
-        address token,
-        uint256 amountReceived,
-        address safe
-    )
-        // uint160 sqrtPriceLimitX96,
-        // uint256 amountOutMinimum,
-        // uint24 fee
-        external
-    {
+    function autoSave(address token, uint256 amountReceived, address safe) external {
         // check that the authorized relayer is the caller
         if (msg.sender != authorizedRelayer) revert NotAuthorized(msg.sender);
 

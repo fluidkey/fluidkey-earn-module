@@ -27,14 +27,11 @@ contract FluidkeySavingsModuleTest is Test {
 
     address owner;
     address[] ownerAddresses;
-    address loan;
-    address repay;
     address authorizedRelayer;
     address safe;
     bytes moduleInitData;
     bytes moduleSettingData;
     bytes moduleData;
-    address payable safeInstance;
     uint256 baseFork;
 
     function setUp() public {
@@ -112,9 +109,21 @@ contract FluidkeySavingsModuleTest is Test {
         assertEq(isInitialized, true, "1: Module is not initialized");
     }
 
-    function test_AutoSave() public {
+    function test_AutoSaveWithRelayer() public {
         deal(address(USDC), safe, 100_000_000);
         vm.startPrank(authorizedRelayer);
+        module.autoSave(address(USDC), 100, safe);
+    }
+
+    function test_AutoSaveWithoutRelayer() public {
+        deal(address(USDC), safe, 100_000_000);
+        address unauthorizedRelayer = makeAddr("unauthorizedRelayer");
+        vm.startPrank(unauthorizedRelayer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FluidkeySavingsModule.NotAuthorized.selector, unauthorizedRelayer
+            )
+        );
         module.autoSave(address(USDC), 100, safe);
     }
 }
