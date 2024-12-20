@@ -1,0 +1,6 @@
+[submodule "lib/safe-tools"]
+	path = lib/safe-tools
+	url = https://github.com/colinnielsen/safe-tools
+[submodule "lib/sentinellist"]
+	path = lib/sentinellist
+	url = https://github.com/rhinestonewtf/sentinellist
