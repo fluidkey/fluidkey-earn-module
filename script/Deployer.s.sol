@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import { Script } from "forge-std/Script.sol";
-import { FluidkeySavingsModule } from "../src/FluidkeySavingsModule.sol";
+import { FluidkeyEarnModule } from "../src/FluidkeyEarnModule.sol";
 import { CREATE3Factory } from "create3-factory/src/CREATE3Factory.sol";
 import { console } from "forge-std/console.sol";
 
@@ -15,7 +15,7 @@ contract Create3Deployment is Script {
         address module = factory.deploy(
             bytes32(salt),
             abi.encodePacked(
-                type(FluidkeySavingsModule).creationCode, abi.encode(authorizedRelayer, weth)
+                type(FluidkeyEarnModule).creationCode, abi.encode(authorizedRelayer, weth)
             )
         );
         console.log("Module deployed at:", module);

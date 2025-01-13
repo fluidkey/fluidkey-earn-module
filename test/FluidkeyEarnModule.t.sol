@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import { Test } from "forge-std/Test.sol";
-import { FluidkeySavingsModule } from "../src/FluidkeySavingsModule.sol";
+import { FluidkeyEarnModule } from "../src/FluidkeyEarnModule.sol";
 import { SafeModuleSetup } from "../src/SafeModuleSetup.sol";
 import { MultiSend } from "../lib/safe-tools/lib/safe-contracts/contracts/libraries/MultiSend.sol";
 import { SafeProxyFactory } from
@@ -13,9 +13,9 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SENTINEL } from "sentinellist/SentinelList.sol";
 import { console } from "forge-std/console.sol";
 
-contract FluidkeySavingsModuleTest is Test {
+contract FluidkeyEarnModuleTest is Test {
     // Contracts
-    FluidkeySavingsModule internal module;
+    FluidkeyEarnModule internal module;
     SafeModuleSetup internal safeModuleSetup;
     MultiSend internal multiSend;
     SafeProxyFactory internal safeProxyFactory;
@@ -39,7 +39,7 @@ contract FluidkeySavingsModuleTest is Test {
 
     function setUp() public {
         // Create a fork on Base
-        string memory DEPLOYMENT_RPC = vm.envString("DEPLOYMENT_RPC");
+        string memory DEPLOYMENT_RPC = vm.envString("RPC_URL_BASE");
         baseFork = vm.createSelectFork(DEPLOYMENT_RPC);
         vm.selectFork(baseFork);
 
@@ -48,7 +48,7 @@ contract FluidkeySavingsModuleTest is Test {
         authorizedRelayer = makeAddr("relayer");
 
         // Initialize contracts
-        module = new FluidkeySavingsModule(authorizedRelayer, address(WETH));
+        module = new FluidkeyEarnModule(authorizedRelayer, address(WETH));
         safeModuleSetup = SafeModuleSetup(0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47);
         multiSend = MultiSend(0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526);
         safeProxyFactory = SafeProxyFactory(0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67);
@@ -60,15 +60,15 @@ contract FluidkeySavingsModuleTest is Test {
         uint256 moduleInitDataLength = moduleInitData.length;
 
         // Create a dynamic array of ConfigWithToken
-        FluidkeySavingsModule.ConfigWithToken[] memory configs =
-            new FluidkeySavingsModule.ConfigWithToken[](2);
+        FluidkeyEarnModule.ConfigWithToken[] memory configs =
+            new FluidkeyEarnModule.ConfigWithToken[](2);
 
         // Populate the array
-        configs[0] = FluidkeySavingsModule.ConfigWithToken({
+        configs[0] = FluidkeyEarnModule.ConfigWithToken({
             token: address(USDC),
             vault: address(RE7_USDC_ERC4626)
         });
-        configs[1] = FluidkeySavingsModule.ConfigWithToken({
+        configs[1] = FluidkeyEarnModule.ConfigWithToken({
             token: address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE),
             vault: address(GAUNTLET_WETH_ERC4626)
         });
@@ -116,36 +116,34 @@ contract FluidkeySavingsModuleTest is Test {
         assertEq(isInitialized, true, "1: Module is not initialized");
     }
 
-    function test_AutoSaveWithRelayerErc20() public {
+    function test_AutoEarnWithRelayerErc20() public {
         deal(address(USDC), safe, 100_000_000);
         vm.startPrank(authorizedRelayer);
-        module.autoSave(address(USDC), 100_000_000, safe);
+        module.autoEarn(address(USDC), 100_000_000, safe);
         uint256 balance = USDC.balanceOf(safe);
         assertEq(balance, 0, "1: USDC balance is not correct");
         uint256 balanceOfVault = RE7_USDC_ERC4626.balanceOf(safe);
         assertGt(balanceOfVault, 0, "2: USDC balance of vault is 0");
     }
 
-    function test_AutoSaveWithRelayerEth() public {
+    function test_AutoEarnWithRelayerEth() public {
         deal(safe, 1 ether);
         vm.startPrank(authorizedRelayer);
-        module.autoSave(ETH, 1 ether, safe);
+        module.autoEarn(ETH, 1 ether, safe);
         uint256 balance = address(safe).balance;
         assertEq(balance, 0, "1: ETH balance is not correct");
         uint256 balanceOfVault = GAUNTLET_WETH_ERC4626.balanceOf(safe);
         assertGt(balanceOfVault, 0, "2: ETH balance of vault is 0");
     }
 
-    function test_AutoSaveWithoutRelayer() public {
+    function test_AutoEarnWithoutRelayer() public {
         deal(address(USDC), safe, 100_000_000);
         address unauthorizedRelayer = makeAddr("unauthorizedRelayer");
         vm.startPrank(unauthorizedRelayer);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                FluidkeySavingsModule.NotAuthorized.selector, unauthorizedRelayer
-            )
+            abi.encodeWithSelector(FluidkeyEarnModule.NotAuthorized.selector, unauthorizedRelayer)
         );
-        module.autoSave(address(USDC), 100_000_000, safe);
+        module.autoEarn(address(USDC), 100_000_000, safe);
     }
 
     function test_UpdateConfig() public {
@@ -153,7 +151,7 @@ contract FluidkeySavingsModuleTest is Test {
         module.setConfig(address(USDC), address(STEAKHOUSE_USDC_ERC4626));
         vm.startPrank(authorizedRelayer);
         deal(address(USDC), safe, 100_000_000);
-        module.autoSave(address(USDC), 100_000_000, safe);
+        module.autoEarn(address(USDC), 100_000_000, safe);
         uint256 balance = USDC.balanceOf(safe);
         assertEq(balance, 0, "1: USDC balance is not correct");
         uint256 balanceOfVault = STEAKHOUSE_USDC_ERC4626.balanceOf(safe);
@@ -171,9 +169,9 @@ contract FluidkeySavingsModuleTest is Test {
         deal(safe, 1 ether);
         vm.startPrank(authorizedRelayer);
         vm.expectRevert(
-            abi.encodeWithSelector(FluidkeySavingsModule.ConfigNotFound.selector, address(ETH))
+            abi.encodeWithSelector(FluidkeyEarnModule.ConfigNotFound.selector, address(ETH))
         );
-        module.autoSave(ETH, 1 ether, safe);
+        module.autoEarn(ETH, 1 ether, safe);
     }
 
     function test_OnUninstall() public {

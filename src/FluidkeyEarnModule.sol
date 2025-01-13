@@ -2,7 +2,9 @@
 pragma solidity ^0.8.23;
 
 /**
- * @title FluidkeySavingsModule
+ * @title FluidkeyEarnModule
+ * This module allows Fluidkey to automatically deposit funds into an ERC-4626 vault on behalf of
+ * users.
  * @dev This contract is based on a contract originally authored by Rhinestone.
  * The original contract can be found at
  * https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol (commit
@@ -32,7 +34,7 @@ interface IWETH {
     function deposit() external payable;
 }
 
-contract FluidkeySavingsModule {
+contract FluidkeyEarnModule {
     using SentinelListLib for SentinelListLib.SentinelList;
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -68,7 +70,7 @@ contract FluidkeySavingsModule {
     event ModuleInitialized(address indexed account);
     event ModuleUninitialized(address indexed account);
     event ConfigSet(address indexed account, address indexed token);
-    event AutoSaveExecuted(address indexed smartAccount, address indexed token, uint256 amountIn);
+    event AutoEarnExecuted(address indexed smartAccount, address indexed token, uint256 amountIn);
 
     /*//////////////////////////////////////////////////////////////////////////
                                      CONFIG
@@ -220,14 +222,14 @@ contract FluidkeySavingsModule {
     //////////////////////////////////////////////////////////////////////////*/
 
     /**
-     * Executes the auto save logic
+     * Executes the auto earn logic
      * @dev the function acts on behalf of the safe's own context
      *
      * @param token address of the token received
      * @param amountToSave amount received by the user
      * @param safe address of the user's safe to execute the transaction on
      */
-    function autoSave(
+    function autoEarn(
         address token,
         uint256 amountToSave,
         address safe
@@ -278,6 +280,6 @@ contract FluidkeySavingsModule {
         );
 
         // emit event
-        emit AutoSaveExecuted(safe, token, amountToSave);
+        emit AutoEarnExecuted(safe, token, amountToSave);
     }
 }
