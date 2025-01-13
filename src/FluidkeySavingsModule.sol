@@ -5,7 +5,8 @@ pragma solidity ^0.8.23;
  * @title FluidkeySavingsModule
  * @dev This contract is based on a contract originally authored by Rhinestone.
  * The original contract can be found at
- * https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol.
+ * https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol (commit
+ * 18b057).
  */
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
@@ -44,11 +45,13 @@ contract FluidkeySavingsModule {
     error ConfigNotFound(address token);
 
     uint256 internal constant MAX_TOKENS = 100;
-    address public immutable WETH = 0x4200000000000000000000000000000000000006; // weth on Base
+    address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address public weth;
     address public authorizedRelayer;
 
-    constructor(address _authorizedRelayer) {
+    constructor(address _authorizedRelayer, address _weth) {
         authorizedRelayer = _authorizedRelayer;
+        weth = _weth;
     }
 
     struct ConfigWithToken {
@@ -72,13 +75,20 @@ contract FluidkeySavingsModule {
     //////////////////////////////////////////////////////////////////////////*/
 
     /**
+     * Modifier to check if the caller is the authorized relayer
+     */
+    modifier onlyAuthorizedRelayer() {
+        if (msg.sender != authorizedRelayer) revert NotAuthorized(msg.sender);
+        _;
+    }
+
+    /**
      * Updates the authorized relayer
      * @dev the function will revert if the caller is not the authorized relayer
      *
      * @param newRelayer address of the new relayer
      */
-    function updateAuthorizedRelayer(address newRelayer) external {
-        if (msg.sender != authorizedRelayer) revert NotAuthorized(msg.sender);
+    function updateAuthorizedRelayer(address newRelayer) external onlyAuthorizedRelayer {
         authorizedRelayer = newRelayer;
     }
 
@@ -121,7 +131,7 @@ contract FluidkeySavingsModule {
      * Handles the uninstallation of the module and clears the tokens and configurations
      * @dev the data parameter is not used
      */
-    function onUninstall(bytes calldata) external {
+    function onUninstall() external {
         // cache the account address
         address account = msg.sender;
 
@@ -211,14 +221,20 @@ contract FluidkeySavingsModule {
 
     /**
      * Executes the auto save logic
+     * @dev the function acts on behalf of the safe's own context
      *
      * @param token address of the token received
-     * @param amountReceived amount received by the user
+     * @param amountToSave amount received by the user
+     * @param safe address of the user's safe to execute the transaction on
      */
-    function autoSave(address token, uint256 amountReceived, address safe) external {
-        // check that the authorized relayer is the caller
-        if (msg.sender != authorizedRelayer) revert NotAuthorized(msg.sender);
-
+    function autoSave(
+        address token,
+        uint256 amountToSave,
+        address safe
+    )
+        external
+        onlyAuthorizedRelayer
+    {
         // initialize the safe instance
         Safe safeInstance = Safe(safe);
 
@@ -236,11 +252,11 @@ contract FluidkeySavingsModule {
         IERC20 tokenToSave;
 
         // if token is ETH, wrap it
-        if (token == address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE)) {
+        if (token == address(ETH)) {
             safeInstance.execTransactionFromModule(
-                address(WETH), amountReceived, abi.encodeWithSelector(IWETH.deposit.selector), 0
+                address(weth), amountToSave, abi.encodeWithSelector(IWETH.deposit.selector), 0
             );
-            tokenToSave = IERC20(WETH);
+            tokenToSave = IERC20(weth);
         } else {
             tokenToSave = IERC20(token);
         }
@@ -249,7 +265,7 @@ contract FluidkeySavingsModule {
         safeInstance.execTransactionFromModule(
             address(tokenToSave),
             0,
-            abi.encodeWithSelector(IERC20.approve.selector, address(vault), amountReceived),
+            abi.encodeWithSelector(IERC20.approve.selector, address(vault), amountToSave),
             0
         );
 
@@ -257,11 +273,11 @@ contract FluidkeySavingsModule {
         safeInstance.execTransactionFromModule(
             address(vault),
             0,
-            abi.encodeWithSelector(IERC4626.deposit.selector, amountReceived, safe),
+            abi.encodeWithSelector(IERC4626.deposit.selector, amountToSave, safe),
             0
         );
 
         // emit event
-        emit AutoSaveExecuted(safe, token, amountReceived);
+        emit AutoSaveExecuted(safe, token, amountToSave);
     }
 }

@@ -11,6 +11,7 @@ import { Safe } from "../lib/safe-tools/lib/safe-contracts/contracts/Safe.sol";
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SENTINEL } from "sentinellist/SentinelList.sol";
+import { console } from "forge-std/console.sol";
 
 contract FluidkeySavingsModuleTest is Test {
     // Contracts
@@ -21,6 +22,7 @@ contract FluidkeySavingsModuleTest is Test {
 
     // ERC20 contracts on Base
     IERC20 public USDC = IERC20(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913);
+    IERC20 public WETH = IERC20(0x4200000000000000000000000000000000000006);
     address public ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     IERC4626 public RE7_USDC_ERC4626 = IERC4626(0x12AFDeFb2237a5963e7BAb3e2D46ad0eee70406e);
     IERC4626 public GAUNTLET_WETH_ERC4626 = IERC4626(0x6b13c060F13Af1fdB319F52315BbbF3fb1D88844);
@@ -46,7 +48,7 @@ contract FluidkeySavingsModuleTest is Test {
         authorizedRelayer = makeAddr("relayer");
 
         // Initialize contracts
-        module = new FluidkeySavingsModule(authorizedRelayer);
+        module = new FluidkeySavingsModule(authorizedRelayer, address(WETH));
         safeModuleSetup = SafeModuleSetup(0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47);
         multiSend = MultiSend(0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526);
         safeProxyFactory = SafeProxyFactory(0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67);
@@ -162,11 +164,22 @@ contract FluidkeySavingsModuleTest is Test {
         address[] memory tokens = module.getTokens(safe);
         vm.startPrank(safe);
         module.deleteConfig(SENTINEL, tokens[0]);
-        vm.startPrank(authorizedRelayer);
+        tokens = module.getTokens(safe);
+        module.deleteConfig(SENTINEL, tokens[0]);
+        tokens = module.getTokens(safe);
+        assertEq(tokens.length, 0, "1: Tokens are not deleted");
         deal(safe, 1 ether);
+        vm.startPrank(authorizedRelayer);
         vm.expectRevert(
             abi.encodeWithSelector(FluidkeySavingsModule.ConfigNotFound.selector, address(ETH))
         );
         module.autoSave(ETH, 1 ether, safe);
+    }
+
+    function test_OnUninstall() public {
+        vm.startPrank(safe);
+        module.onUninstall();
+        address[] memory tokens = module.getTokens(safe);
+        assertEq(tokens.length, 0, "1: Tokens are not deleted");
     }
 }
