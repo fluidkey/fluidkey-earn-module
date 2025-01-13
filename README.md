@@ -6,12 +6,9 @@ The Fluidkey Savings Module is a Safe module that allows Fluidkey to automatical
 
 To build run `forge build` or `npx run build`
 
-To deploy
-```bash
-forge create --rpc-url <your_rpc_url> \
-    --constructor-args "0xauthAddress" \
-    --private-key <your_private_key> \
-    --etherscan-api-key <your_etherscan_api_key> \
-    --verify \
-    src/FluidkeySavingsModule.sol:FluidkeySavingsModule
-```
+To deploy:
+* Create `.env` file with `PRIVATE_KEY=0xPrivateKey` and `BASESCAN_KEY=YourEtherscanApiKey`
+* Run the deployment with the command `forge script script/Deployer.s.sol:Create2Deployment --rpc-url <your-rpc-url> --broadcast --verify -vvvv`
+
+If you want to verify on other chains rather than Base:
+* edit `foundry.toml` adding other chains and accordingly .env variables
