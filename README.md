@@ -8,7 +8,7 @@ To build run `forge build` or `npx run build`
 
 To deploy:
 * Create `.env` file with `PRIVATE_KEY=0xPrivateKey` and `BASESCAN_KEY=YourEtherscanApiKey`
-* Run the deployment with the command `forge script script/Deployer.s.sol:Create2Deployment --rpc-url <your-rpc-url> --broadcast --verify -vvvv`
+* Run the deployment with the command `forge script --chain <your-chain> script/Deployer.s.sol:Create3Deployment <authorizedRelayer> <wethAddress> <salt> --sig 'run(address,address,bytes)' --rpc-url <your-rpc-url> --broadcast --verify -vvvv`
 
 If you want to verify on other chains rather than Base:
 * edit `foundry.toml` adding other chains and accordingly .env variables

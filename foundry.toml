@@ -25,3 +25,6 @@ wrap_comments = true
 
 [etherscan]
 base = { key = "${BASESCAN_KEY}" }
+
+[network]
+base = "${RPC_URL_BASE}"

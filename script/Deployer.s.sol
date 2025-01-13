@@ -1,14 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Script} from "forge-std/Script.sol";
-import {FluidkeySavingsModule} from "src/FluidkeySavingsModule.sol";
+import { Script } from "forge-std/Script.sol";
+import { FluidkeySavingsModule } from "../src/FluidkeySavingsModule.sol";
+import { CREATE3Factory } from "create3-factory/src/CREATE3Factory.sol";
+import { console } from "forge-std/console.sol";
 
-contract Create2Deployment is Script {
-    function run() external {
+contract Create3Deployment is Script {
+    CREATE3Factory factory = CREATE3Factory(0x9fBB3DF7C40Da2e5A0dE984fFE2CCB7C47cd0ABf);
+
+    function run(address authorizedRelayer, address weth, bytes calldata salt) external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
-        new FluidkeySavingsModule{salt: bytes32("f100ed4ee")}(0xDF54D2323E6698fcAb01b621504150F3d2Cc4Fb4);
+        address module = factory.deploy(
+            bytes32(salt),
+            abi.encodePacked(
+                type(FluidkeySavingsModule).creationCode, abi.encode(authorizedRelayer, weth)
+            )
+        );
+        console.log("Module deployed at:", module);
         vm.stopBroadcast();
     }
 }
