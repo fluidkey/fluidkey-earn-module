@@ -180,4 +180,17 @@ contract FluidkeyEarnModuleTest is Test {
         address[] memory tokens = module.getTokens(safe);
         assertEq(tokens.length, 0, "1: Tokens are not deleted");
     }
+
+    function test_AddRemoveRelayer() public {
+        address newRelayer = makeAddr("newRelayer");
+        vm.startPrank(authorizedRelayer);
+        module.addAuthorizedRelayer(newRelayer);
+        vm.startPrank(newRelayer);
+        module.removeAuthorizedRelayer(authorizedRelayer);
+        console.log(module.owner());
+        vm.startPrank(authorizedRelayer);
+        module.addAuthorizedRelayer(authorizedRelayer);
+        module.removeAuthorizedRelayer(authorizedRelayer);
+        vm.expectRevert(abi.encodeWithSelector(FluidkeyEarnModule.CannotRemoveSelf.selector));
+    }
 }
