@@ -87,7 +87,6 @@ contract FluidkeyEarnModule is Ownable {
      * Modifier to check if the caller is the authorized relayer
      */
     modifier onlyAuthorizedRelayer() {
-        // TODO - this can be if (msg.sender != owner() && !authorizedRelayer[msg.sender])
         if (!authorizedRelayer[msg.sender] && msg.sender != owner()) revert NotAuthorized(msg.sender);
         _;
     }
@@ -302,20 +301,26 @@ contract FluidkeyEarnModule is Ownable {
         }
 
         // approve the vault to spend the token
-        safeInstance.execTransactionFromModule(
+        bool approvalSuccess = safeInstance.execTransactionFromModule(
             address(tokenToSave),
             0,
             abi.encodeWithSelector(IERC20.approve.selector, address(vault), amountToSave),
             0
         );
+        if (!approvalSuccess) {
+            revert("Failed to approve vault to spend tokens");
+        }
 
         // deposit to vault
-        safeInstance.execTransactionFromModule(
+        bool depositSuccess = safeInstance.execTransactionFromModule(
             address(vault),
             0,
             abi.encodeWithSelector(IERC4626.deposit.selector, amountToSave, safe),
             0
         );
+        if (!depositSuccess) {
+            revert("Failed to deposit tokens into the vault");
+        }
 
         // emit event
         emit AutoEarnExecuted(safe, token, amountToSave);
