@@ -53,7 +53,7 @@ contract FluidkeyEarnModuleTest is Test {
         multiSend = MultiSend(0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526);
         safeProxyFactory = SafeProxyFactory(0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67);
 
-        // Prepare the FluidkeySavingsModule init and setting data as part of a multisend tx
+        // Prepare the FluidkeyEarnModule init and setting data as part of a multisend tx
         address[] memory modules = new address[](1);
         modules[0] = address(module);
         moduleInitData = abi.encodeWithSelector(safeModuleSetup.enableModules.selector, modules);
