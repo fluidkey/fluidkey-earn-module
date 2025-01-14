@@ -182,13 +182,18 @@ contract FluidkeyEarnModuleTest is Test {
         address newRelayer = makeAddr("newRelayer");
         vm.startPrank(authorizedRelayer);
         module.addAuthorizedRelayer(newRelayer);
+        vm.stopPrank();
         vm.startPrank(newRelayer);
         module.removeAuthorizedRelayer(authorizedRelayer);
+        vm.stopPrank();
         vm.startPrank(authorizedRelayer);
-        vm.expectRevert(abi.encodeWithSelector(FluidkeyEarnModule.NotAuthorized.selector), authorizedRelayer);
+        vm.expectRevert(
+            abi.encodeWithSelector(FluidkeyEarnModule.NotAuthorized.selector, authorizedRelayer)
+        );
         module.addAuthorizedRelayer(authorizedRelayer);
+        vm.stopPrank();
         vm.startPrank(newRelayer);
-        vm.expectRevert(abi.encodeWithSelector(FluidkeyEarnModule.CannotRemoveSelf.selector));
+        vm.expectRevert(FluidkeyEarnModule.CannotRemoveSelf.selector);
         module.removeAuthorizedRelayer(authorizedRelayer);
     }
 
@@ -220,7 +225,6 @@ contract FluidkeyEarnModuleTest is Test {
 
     function test_AddModuleOwnerAsRelayerWorks() public {
         vm.startPrank(moduleOwner);
-        console.log(module.owner());
         // Adding owner again should work without affecting permissions
         module.addAuthorizedRelayer(moduleOwner);
         bool isRelayer = module.authorizedRelayers(moduleOwner);
