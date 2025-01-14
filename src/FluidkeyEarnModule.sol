@@ -13,7 +13,7 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
-import { Ownable } from "../lib/safe-tools/lib/solady/src/auth/Ownable.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 interface Safe {
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
@@ -52,7 +52,7 @@ contract FluidkeyEarnModule is Ownable {
     address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address public weth;
 
-    constructor(address _authorizedRelayer, address _weth) {
+    constructor(address _authorizedRelayer, address _weth) Ownable(msg.sender) {
         authorizedRelayers[_authorizedRelayer] = true;
         emit AddAuthorizedRelayer(_authorizedRelayer);
         weth = _weth;
