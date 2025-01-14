@@ -194,7 +194,7 @@ contract FluidkeyEarnModuleTest is Test {
         vm.stopPrank();
         vm.startPrank(newRelayer);
         vm.expectRevert(FluidkeyEarnModule.CannotRemoveSelf.selector);
-        module.removeAuthorizedRelayer(authorizedRelayer);
+        module.removeAuthorizedRelayer(newRelayer);
     }
 
     function test_AutoEarnWithModuleOwnerAsRelayer() public {
