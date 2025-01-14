@@ -13,7 +13,7 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
-import {Ownable} from "../lib/safe-tools/lib/solady/src/auth/Ownable.sol";
+import { Ownable } from "../lib/safe-tools/lib/solady/src/auth/Ownable.sol";
 
 interface Safe {
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
@@ -46,13 +46,14 @@ contract FluidkeyEarnModule is Ownable {
     error ModuleNotInitialized(address account);
     error NotAuthorized(address relayer);
     error ConfigNotFound(address token);
+    error CannotRemoveSelf();
 
     uint256 internal constant MAX_TOKENS = 100;
     address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address public weth;
 
     constructor(address _authorizedRelayer, address _weth) {
-        authorizedRelayer[_authorizedRelayer] = true;
+        authorizedRelayers[_authorizedRelayer] = true;
         emit AddAuthorizedRelayer(_authorizedRelayer);
         weth = _weth;
     }
@@ -63,7 +64,7 @@ contract FluidkeyEarnModule is Ownable {
     }
 
     // authorizedRelayer -> bool
-    mapping(address authorizedRelayer => bool) public authorizedRelayer;
+    mapping(address authorizedRelayer => bool) public authorizedRelayers;
 
     // account => token => Config
     mapping(address account => mapping(address token => address vault)) public config;
@@ -86,9 +87,9 @@ contract FluidkeyEarnModule is Ownable {
      * Modifier to check if the caller is the authorized relayer
      */
     modifier onlyAuthorizedRelayer() {
-        // TODO - this can be if (msg.sender != owner() && !authorizedRelayer[msg.sender])
-        if (msg.sender != owner()) revert NotAuthorized(msg.sender);
-        if (!authorizedRelayer[msg.sender]) revert NotAuthorized(msg.sender);
+        if (msg.sender != owner() && !authorizedRelayers[msg.sender]) {
+            revert NotAuthorized(msg.sender);
+        }
         _;
     }
 
@@ -99,7 +100,7 @@ contract FluidkeyEarnModule is Ownable {
      * @param newRelayer address of the new relayer
      */
     function addAuthorizedRelayer(address newRelayer) external onlyAuthorizedRelayer {
-        authorizedRelayer[newRelayer] = true;
+        authorizedRelayers[newRelayer] = true;
         emit AddAuthorizedRelayer(newRelayer);
     }
 
@@ -110,8 +111,8 @@ contract FluidkeyEarnModule is Ownable {
      * @param relayer address of the relayer to be removed
      */
     function removeAuthorizedRelayer(address relayer) external onlyAuthorizedRelayer {
-        require(relayer != msg.sender, "Cannot remove self");
-        delete authorizedRelayer[relayer];
+        if (relayer == msg.sender) revert CannotRemoveSelf();
+        delete authorizedRelayers[relayer];
         emit RemoveAuthorizedRelayer(relayer);
     }
 
@@ -248,10 +249,8 @@ contract FluidkeyEarnModule is Ownable {
 
         for (uint256 i; i < tokensArray.length; i++) {
             address tokenAddr = tokensArray[i];
-            configsArray[i] = ConfigWithToken({
-                token: tokenAddr,
-                vault: config[account][tokenAddr]
-            });
+            configsArray[i] =
+                ConfigWithToken({ token: tokenAddr, vault: config[account][tokenAddr] });
         }
 
         return configsArray;
