@@ -32,6 +32,7 @@ contract FluidkeyEarnModuleTest is Test {
     address[] internal ownerAddresses;
     address internal authorizedRelayer;
     address internal safe;
+    address internal moduleOwner;
     bytes internal moduleInitData;
     bytes internal moduleSettingData;
     bytes internal moduleData;
@@ -45,10 +46,13 @@ contract FluidkeyEarnModuleTest is Test {
 
         // Create test addresses
         owner = makeAddr("bob");
+        moduleOwner = makeAddr("moduleDeployer");
         authorizedRelayer = makeAddr("relayer");
 
-        // Initialize contracts
+        // Initialize contracts - deploy module from moduleOwner
+        vm.startPrank(moduleOwner);
         module = new FluidkeyEarnModule(authorizedRelayer, address(WETH));
+        vm.stopPrank();
         safeModuleSetup = SafeModuleSetup(0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47);
         multiSend = MultiSend(0x38869bf66a61cF6bDB996A6aE40D5853Fd43B526);
         safeProxyFactory = SafeProxyFactory(0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67);
@@ -174,23 +178,65 @@ contract FluidkeyEarnModuleTest is Test {
         module.autoEarn(ETH, 1 ether, safe);
     }
 
-    function test_OnUninstall() public {
-        vm.startPrank(safe);
-        module.onUninstall();
-        address[] memory tokens = module.getTokens(safe);
-        assertEq(tokens.length, 0, "1: Tokens are not deleted");
-    }
-
     function test_AddRemoveRelayer() public {
         address newRelayer = makeAddr("newRelayer");
         vm.startPrank(authorizedRelayer);
         module.addAuthorizedRelayer(newRelayer);
         vm.startPrank(newRelayer);
         module.removeAuthorizedRelayer(authorizedRelayer);
-        console.log(module.owner());
         vm.startPrank(authorizedRelayer);
+        vm.expectRevert(abi.encodeWithSelector(FluidkeyEarnModule.NotAuthorized.selector), authorizedRelayer);
         module.addAuthorizedRelayer(authorizedRelayer);
-        module.removeAuthorizedRelayer(authorizedRelayer);
+        vm.startPrank(newRelayer);
         vm.expectRevert(abi.encodeWithSelector(FluidkeyEarnModule.CannotRemoveSelf.selector));
+        module.removeAuthorizedRelayer(authorizedRelayer);
+    }
+
+    function test_AutoEarnWithModuleOwnerAsRelayer() public {
+        deal(address(USDC), safe, 100_000_000);
+        vm.startPrank(moduleOwner);
+        // ModuleOwner should work as authorized since owner has permission
+        module.autoEarn(address(USDC), 100_000_000, safe);
+        uint256 balance = USDC.balanceOf(safe);
+        assertEq(balance, 0);
+        uint256 balanceOfVault = RE7_USDC_ERC4626.balanceOf(safe);
+        assertGt(balanceOfVault, 0);
+    }
+
+    function test_CannotRemoveModuleOwnerFromRelayers() public {
+        vm.startPrank(moduleOwner);
+        // Attempt to remove self should revert
+        vm.expectRevert(FluidkeyEarnModule.CannotRemoveSelf.selector);
+        module.removeAuthorizedRelayer(moduleOwner);
+    }
+
+    function test_ModuleOwnerCanAddRelayer() public {
+        address newRelayer = makeAddr("newRelayer");
+        vm.startPrank(moduleOwner);
+        module.addAuthorizedRelayer(newRelayer);
+        bool isRelayer = module.authorizedRelayers(newRelayer);
+        assertTrue(isRelayer, "Module owner could not add a new relayer");
+    }
+
+    function test_AddModuleOwnerAsRelayerWorks() public {
+        vm.startPrank(moduleOwner);
+        console.log(module.owner());
+        // Adding owner again should work without affecting permissions
+        module.addAuthorizedRelayer(moduleOwner);
+        bool isRelayer = module.authorizedRelayers(moduleOwner);
+        assertTrue(isRelayer);
+        // Owner continues to execute actions
+        deal(address(USDC), safe, 100_000_000);
+        module.autoEarn(address(USDC), 100_000_000, safe);
+        uint256 balanceOfVault = RE7_USDC_ERC4626.balanceOf(safe);
+        assertGt(balanceOfVault, 0);
+    }
+
+
+    function test_OnUninstall() public {
+        vm.startPrank(safe);
+        module.onUninstall();
+        address[] memory tokens = module.getTokens(safe);
+        assertEq(tokens.length, 0, "1: Tokens are not deleted");
     }
 }

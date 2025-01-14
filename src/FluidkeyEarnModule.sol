@@ -87,7 +87,7 @@ contract FluidkeyEarnModule is Ownable {
      * Modifier to check if the caller is the authorized relayer
      */
     modifier onlyAuthorizedRelayer() {
-        if (!authorizedRelayer[msg.sender] && msg.sender != owner()) revert NotAuthorized(msg.sender);
+        if (!authorizedRelayers[msg.sender] && msg.sender != owner()) revert NotAuthorized(msg.sender);
         _;
     }
 
