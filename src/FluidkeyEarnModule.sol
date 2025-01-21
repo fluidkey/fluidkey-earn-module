@@ -13,6 +13,7 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 interface Safe {
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
@@ -34,7 +35,7 @@ interface IWETH {
     function deposit() external payable;
 }
 
-contract FluidkeyEarnModule {
+contract FluidkeyEarnModule is Ownable {
     using SentinelListLib for SentinelListLib.SentinelList;
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -45,14 +46,15 @@ contract FluidkeyEarnModule {
     error ModuleNotInitialized(address account);
     error NotAuthorized(address relayer);
     error ConfigNotFound(address token);
+    error CannotRemoveSelf();
 
     uint256 internal constant MAX_TOKENS = 100;
     address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address public weth;
-    address public authorizedRelayer;
 
-    constructor(address _authorizedRelayer, address _weth) {
-        authorizedRelayer = _authorizedRelayer;
+    constructor(address _authorizedRelayer, address _weth) Ownable(msg.sender) {
+        authorizedRelayers[_authorizedRelayer] = true;
+        emit AddAuthorizedRelayer(_authorizedRelayer);
         weth = _weth;
     }
 
@@ -61,12 +63,17 @@ contract FluidkeyEarnModule {
         address vault; // address of the vault
     }
 
+    // authorizedRelayer -> bool
+    mapping(address authorizedRelayer => bool) public authorizedRelayers;
+
     // account => token => Config
     mapping(address account => mapping(address token => address vault)) public config;
 
     // account => tokens
     mapping(address account => SentinelListLib.SentinelList) tokens;
 
+    event AddAuthorizedRelayer(address indexed relayer);
+    event RemoveAuthorizedRelayer(address indexed relayer);
     event ModuleInitialized(address indexed account);
     event ModuleUninitialized(address indexed account);
     event ConfigSet(address indexed account, address indexed token);
@@ -80,25 +87,36 @@ contract FluidkeyEarnModule {
      * Modifier to check if the caller is the authorized relayer
      */
     modifier onlyAuthorizedRelayer() {
-        if (msg.sender != authorizedRelayer) revert NotAuthorized(msg.sender);
+        if (!authorizedRelayers[msg.sender] && msg.sender != owner()) revert NotAuthorized(msg.sender);
         _;
     }
 
     /**
-     * Updates the authorized relayer
+     * Adds a new authorized relayer
      * @dev the function will revert if the caller is not the authorized relayer
      *
      * @param newRelayer address of the new relayer
      */
-    function updateAuthorizedRelayer(address newRelayer) external onlyAuthorizedRelayer {
-        authorizedRelayer = newRelayer;
+    function addAuthorizedRelayer(address newRelayer) external onlyAuthorizedRelayer {
+        authorizedRelayers[newRelayer] = true;
+        emit AddAuthorizedRelayer(newRelayer);
+    }
+
+    /**
+     * Removes an authorized relayer
+     * @dev the function will revert if the caller is not the authorized relayer
+     *
+     * @param relayer address of the relayer to be removed
+     */
+    function removeAuthorizedRelayer(address relayer) external onlyAuthorizedRelayer {
+        if (relayer == msg.sender) revert CannotRemoveSelf();
+        delete authorizedRelayers[relayer];
+        emit RemoveAuthorizedRelayer(relayer);
     }
 
     /**
      * Initializes the module with the tokens and their configurations
-     * @dev data is encoded as follows: abi.encode([tokens], [configs])
-     * @dev if there are more tokens than configs, the function will revert
-     * @dev if there are more configs than tokens, the function will ignore the extra configs
+     * @dev data is encoded as follows: abi.encode(ConfigWithToken[])
      *
      * @param data encoded data containing the tokens and their configurations
      */
@@ -217,6 +235,25 @@ contract FluidkeyEarnModule {
         (tokensArray,) = tokens[account].getEntriesPaginated(SENTINEL, MAX_TOKENS);
     }
 
+    /**
+     * Gets all configurations for an account
+     * @dev the function will revert if the module is not initialized
+     *
+     * @param account address of the account
+     */
+    function getAllConfigs(address account) external view returns (ConfigWithToken[] memory) {
+        address[] memory tokensArray = this.getTokens(account);
+        ConfigWithToken[] memory configsArray = new ConfigWithToken[](tokensArray.length);
+
+        for (uint256 i; i < tokensArray.length; i++) {
+            address tokenAddr = tokensArray[i];
+            configsArray[i] =
+                ConfigWithToken({ token: tokenAddr, vault: config[account][tokenAddr] });
+        }
+
+        return configsArray;
+    }
+
     /*//////////////////////////////////////////////////////////////////////////
                                      MODULE LOGIC
     //////////////////////////////////////////////////////////////////////////*/
@@ -264,20 +301,26 @@ contract FluidkeyEarnModule {
         }
 
         // approve the vault to spend the token
-        safeInstance.execTransactionFromModule(
+        bool approvalSuccess = safeInstance.execTransactionFromModule(
             address(tokenToSave),
             0,
             abi.encodeWithSelector(IERC20.approve.selector, address(vault), amountToSave),
             0
         );
+        if (!approvalSuccess) {
+            revert("Failed to approve vault to spend tokens");
+        }
 
         // deposit to vault
-        safeInstance.execTransactionFromModule(
+        bool depositSuccess = safeInstance.execTransactionFromModule(
             address(vault),
             0,
             abi.encodeWithSelector(IERC4626.deposit.selector, amountToSave, safe),
             0
         );
+        if (!depositSuccess) {
+            revert("Failed to deposit tokens into the vault");
+        }
 
         // emit event
         emit AutoEarnExecuted(safe, token, amountToSave);
