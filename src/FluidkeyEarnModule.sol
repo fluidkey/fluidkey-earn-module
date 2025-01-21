@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.23;
 
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
+import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import { IERC1271 } from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
+import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+
 /**
  * @title FluidkeyEarnModule
  * This module allows Fluidkey to automatically deposit funds into an ERC-4626 vault on behalf of
@@ -10,11 +18,6 @@ pragma solidity ^0.8.23;
  * https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol (commit
  * 18b057).
  */
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
-import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-
 interface Safe {
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
@@ -259,6 +262,83 @@ contract FluidkeyEarnModule is Ownable {
     //////////////////////////////////////////////////////////////////////////*/
 
     /**
+     * Initiates the auto-earn process for the specified token and amount.
+     * This overload checks the relayer's authorization and verifies the signature.
+     *
+     * @param token The address of the token to be saved.
+     * @param amountToSave The amount of tokens to deposit into the vault.
+     * @param safe The address of the Safe from which the transaction is executed.
+     * @param relayer The address of the relayer initiating the transaction.
+     * @param signature A signature from the relayer verifying the transaction details.
+     */
+    function autoEarn(
+        address token,
+        uint256 amountToSave,
+        address safe,
+        address relayer,
+        bytes memory signature
+    ) external {
+        // Ensure the relayer is authorized
+        if (!authorizedRelayers[relayer]) {
+            revert NotAuthorized(relayer);
+        }
+
+        // Hash the transaction data to verify the signature
+        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe));
+
+        // Verify the signature
+        if (!_verifySignature(hash, signature, relayer)) {
+            revert("Invalid signature");
+        }
+
+        // Execute the auto-earn process
+        _autoEarn(token, amountToSave, safe);
+    }
+
+    /**
+     * Initiates the auto-earn process for the specified token and amount.
+     * This overload assumes the caller is already an authorized relayer.
+     *
+     * @param token The address of the token to be saved.
+     * @param amountToSave The amount of tokens to deposit into the vault.
+     * @param safe The address of the Safe from which the transaction is executed.
+     */
+    function autoEarn(
+        address token,
+        uint256 amountToSave,
+        address safe
+    ) external onlyAuthorizedRelayer {
+        _autoEarn(token, amountToSave, safe);
+    }
+
+    /**
+     * Verifies the validity of a signature for the given hash and relayer.
+     * Uses EIP-1271 for contract relayers or ECDSA for EOAs.
+     *
+     * @param hash The hash of the data to verify the signature against.
+     * @param signature The signature to verify.
+     * @param relayer The address of the relayer that supposedly signed the hash.
+     * @return true if the signature is valid, false otherwise.
+     */
+    function _verifySignature(
+        bytes32 hash,
+        bytes memory signature,
+        address relayer
+    ) internal view returns (bool) {
+        // Use EIP-1271 for contracts
+        if (relayer.code.length > 0) {
+            try IERC1271(relayer).isValidSignature(hash, signature) returns (bytes4 magic) {
+                return magic == IERC1271.isValidSignature.selector;
+            } catch {
+                return false;
+            }
+        } else {
+            // Use ECDSA for externally owned accounts
+            return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(hash), signature) == relayer;
+        }
+    }
+
+    /**
      * Executes the auto earn logic
      * @dev the function acts on behalf of the safe's own context
      *
@@ -266,13 +346,12 @@ contract FluidkeyEarnModule is Ownable {
      * @param amountToSave amount received by the user
      * @param safe address of the user's safe to execute the transaction on
      */
-    function autoEarn(
+    function _autoEarn(
         address token,
         uint256 amountToSave,
         address safe
     )
-        external
-        onlyAuthorizedRelayer
+        private
     {
         // initialize the safe instance
         Safe safeInstance = Safe(safe);
