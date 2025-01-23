@@ -271,16 +271,18 @@ contract FluidkeyEarnModule is Ownable {
      * @param token The address of the token to be saved.
      * @param amountToSave The amount of tokens to deposit into the vault.
      * @param safe The address of the Safe from which the transaction is executed.
+     * @param nonce A unique identifier for the transaction, so that 2 txs for same token, safe and amount can be distinguished.
      * @param signature A signature from the relayer verifying the transaction details.
      */
     function autoEarn(
         address token,
         uint256 amountToSave,
         address safe,
+        uint256 nonce,
         bytes memory signature
     ) external {
         // Ensure the relayer is an authorized one and the signature not already used
-        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe));
+        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe, nonce));
         bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(hash);
         if (executedHashes[ethSignedHash]) {
             revert SignatureAlreadyUsed();

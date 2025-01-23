@@ -215,7 +215,8 @@ contract FluidkeyEarnModuleTest is Test {
         deal(address(USDC), safe, 100_000_000);
 
         // Sign the message with the authorized relayer's key
-        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(100_000_000), safe));
+        uint256 nonce = 1234;
+        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(100_000_000), safe, nonce));
         bytes32 ethHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
         );
@@ -224,7 +225,7 @@ contract FluidkeyEarnModuleTest is Test {
 
         // Execute autoEarn with a valid signature
         vm.prank(makeAddr("anyone"));
-        module.autoEarn(address(USDC), 100_000_000, safe, signature);
+        module.autoEarn(address(USDC), 100_000_000, safe, nonce, signature);
 
         // Verify the funds got deposited
         assertEq(USDC.balanceOf(safe), 0);
@@ -236,7 +237,8 @@ contract FluidkeyEarnModuleTest is Test {
         deal(address(USDC), safe, 50_000_000);
 
         // Sign with a different private key (unauthorized)
-        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(50_000_000), safe));
+        uint256 nonce = 1234;
+        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(50_000_000), safe, nonce));
         bytes32 ethHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
         );
@@ -253,7 +255,7 @@ contract FluidkeyEarnModuleTest is Test {
                 vm.addr(UNAUTHORIZED_PRIVATE_KEY)
             )
         );
-        module.autoEarn(address(USDC), 50_000_000, safe, signature);
+        module.autoEarn(address(USDC), 50_000_000, safe, nonce, signature);
     }
 
     function test_AutoEarnReplaySignature() public {
@@ -261,7 +263,8 @@ contract FluidkeyEarnModuleTest is Test {
         deal(address(USDC), safe, 100_000_000);
 
         // Create a valid signature from authorized relayer
-        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(10_000_000), safe));
+        uint256 nonce = 1234;
+        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(10_000_000), safe, nonce));
         bytes32 ethHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
         );
@@ -270,12 +273,12 @@ contract FluidkeyEarnModuleTest is Test {
 
         // First call succeeds
         vm.prank(makeAddr("anyone"));
-        module.autoEarn(address(USDC), 10_000_000, safe, signature);
+        module.autoEarn(address(USDC), 10_000_000, safe, nonce, signature);
 
         // Second call with the same signature should revert
         vm.prank(makeAddr("anyone"));
         vm.expectRevert(FluidkeyEarnModule.SignatureAlreadyUsed.selector);
-        module.autoEarn(address(USDC), 10_000_000, safe, signature);
+        module.autoEarn(address(USDC), 10_000_000, safe, nonce, signature);
     }
 
     function test_CannotRemoveModuleOwnerFromRelayers() public {
