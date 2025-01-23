@@ -6,7 +6,6 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import { IERC1271 } from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
@@ -50,6 +49,7 @@ contract FluidkeyEarnModule is Ownable {
     error NotAuthorized(address relayer);
     error ConfigNotFound(address token);
     error CannotRemoveSelf();
+    error SignatureAlreadyUsed();
 
     uint256 internal constant MAX_TOKENS = 100;
     address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -74,6 +74,9 @@ contract FluidkeyEarnModule is Ownable {
 
     // account => tokens
     mapping(address account => SentinelListLib.SentinelList) tokens;
+
+    // hash => executed (avoid replay attacks)
+    mapping(bytes32 => bool) public executedHashes;
 
     event AddAuthorizedRelayer(address indexed relayer);
     event RemoveAuthorizedRelayer(address indexed relayer);
@@ -268,28 +271,25 @@ contract FluidkeyEarnModule is Ownable {
      * @param token The address of the token to be saved.
      * @param amountToSave The amount of tokens to deposit into the vault.
      * @param safe The address of the Safe from which the transaction is executed.
-     * @param relayer The address of the relayer initiating the transaction.
      * @param signature A signature from the relayer verifying the transaction details.
      */
     function autoEarn(
         address token,
         uint256 amountToSave,
         address safe,
-        address relayer,
         bytes memory signature
     ) external {
-        // Ensure the relayer is authorized
+        // Ensure the relayer is an authorized one and the signature not already used
+        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe));
+        bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(hash);
+        if (executedHashes[ethSignedHash]) {
+            revert SignatureAlreadyUsed();
+        }
+        address relayer = ECDSA.recover(ethSignedHash, signature);
         if (!authorizedRelayers[relayer]) {
             revert NotAuthorized(relayer);
         }
-
-        // Hash the transaction data to verify the signature
-        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe));
-
-        // Verify the signature
-        if (!_verifySignature(hash, signature, relayer)) {
-            revert("Invalid signature");
-        }
+        executedHashes[ethSignedHash] = true;
 
         // Execute the auto-earn process
         _autoEarn(token, amountToSave, safe);
@@ -309,33 +309,6 @@ contract FluidkeyEarnModule is Ownable {
         address safe
     ) external onlyAuthorizedRelayer {
         _autoEarn(token, amountToSave, safe);
-    }
-
-    /**
-     * Verifies the validity of a signature for the given hash and relayer.
-     * Uses EIP-1271 for contract relayers or ECDSA for EOAs.
-     *
-     * @param hash The hash of the data to verify the signature against.
-     * @param signature The signature to verify.
-     * @param relayer The address of the relayer that supposedly signed the hash.
-     * @return true if the signature is valid, false otherwise.
-     */
-    function _verifySignature(
-        bytes32 hash,
-        bytes memory signature,
-        address relayer
-    ) internal view returns (bool) {
-        // Use EIP-1271 for contracts
-        if (relayer.code.length > 0) {
-            try IERC1271(relayer).isValidSignature(hash, signature) returns (bytes4 magic) {
-                return magic == IERC1271.isValidSignature.selector;
-            } catch {
-                return false;
-            }
-        } else {
-            // Use ECDSA for externally owned accounts
-            return ECDSA.recover(MessageHashUtils.toEthSignedMessageHash(hash), signature) == relayer;
-        }
     }
 
     /**
