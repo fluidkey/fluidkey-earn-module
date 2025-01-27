@@ -309,7 +309,6 @@ contract FluidkeyEarnModuleTest is Test {
         assertGt(balanceOfVault, 0);
     }
 
-
     function test_OnUninstall() public {
         vm.startPrank(safe);
         module.onUninstall();

@@ -6,7 +6,7 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import { MessageHashUtils } from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import { MessageHashUtils } from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title FluidkeyEarnModule
