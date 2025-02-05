@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.23;
 
+import { IERC20 } from "forge-std/interfaces/IERC20.sol";
+import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
+import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+
 /**
  * @title FluidkeyEarnModule
  * This module allows Fluidkey to automatically deposit funds into an ERC-4626 vault on behalf of
@@ -10,11 +17,6 @@ pragma solidity ^0.8.23;
  * https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol (commit
  * 18b057).
  */
-import { IERC20 } from "forge-std/interfaces/IERC20.sol";
-import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
-import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-
 interface Safe {
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
@@ -47,6 +49,7 @@ contract FluidkeyEarnModule is Ownable {
     error NotAuthorized(address relayer);
     error ConfigNotFound(address token);
     error CannotRemoveSelf();
+    error SignatureAlreadyUsed();
 
     uint256 internal constant MAX_TOKENS = 100;
     address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -71,6 +74,9 @@ contract FluidkeyEarnModule is Ownable {
 
     // account => tokens
     mapping(address account => SentinelListLib.SentinelList) tokens;
+
+    // hash => executed (avoid replay attacks)
+    mapping(bytes32 => bool) public executedHashes;
 
     event AddAuthorizedRelayer(address indexed relayer);
     event RemoveAuthorizedRelayer(address indexed relayer);
@@ -259,6 +265,55 @@ contract FluidkeyEarnModule is Ownable {
     //////////////////////////////////////////////////////////////////////////*/
 
     /**
+     * Initiates the auto-earn process for the specified token and amount.
+     * This overload checks the relayer's authorization and verifies the signature.
+     *
+     * @param token The address of the token to be saved.
+     * @param amountToSave The amount of tokens to deposit into the vault.
+     * @param safe The address of the Safe from which the transaction is executed.
+     * @param nonce A unique identifier for the transaction, so that 2 txs for same token, safe and amount can be distinguished.
+     * @param signature A signature from the relayer verifying the transaction details.
+     */
+    function autoEarn(
+        address token,
+        uint256 amountToSave,
+        address safe,
+        uint256 nonce,
+        bytes memory signature
+    ) external {
+        // Ensure the relayer is an authorized one and the signature not already used
+        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe, nonce));
+        bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(hash);
+        if (executedHashes[ethSignedHash]) {
+            revert SignatureAlreadyUsed();
+        }
+        address relayer = ECDSA.recover(ethSignedHash, signature);
+        if (!authorizedRelayers[relayer]) {
+            revert NotAuthorized(relayer);
+        }
+        executedHashes[ethSignedHash] = true;
+
+        // Execute the auto-earn process
+        _autoEarn(token, amountToSave, safe);
+    }
+
+    /**
+     * Initiates the auto-earn process for the specified token and amount.
+     * This overload assumes the caller is already an authorized relayer.
+     *
+     * @param token The address of the token to be saved.
+     * @param amountToSave The amount of tokens to deposit into the vault.
+     * @param safe The address of the Safe from which the transaction is executed.
+     */
+    function autoEarn(
+        address token,
+        uint256 amountToSave,
+        address safe
+    ) external onlyAuthorizedRelayer {
+        _autoEarn(token, amountToSave, safe);
+    }
+
+    /**
      * Executes the auto earn logic
      * @dev the function acts on behalf of the safe's own context
      *
@@ -266,13 +321,12 @@ contract FluidkeyEarnModule is Ownable {
      * @param amountToSave amount received by the user
      * @param safe address of the user's safe to execute the transaction on
      */
-    function autoEarn(
+    function _autoEarn(
         address token,
         uint256 amountToSave,
         address safe
     )
-        external
-        onlyAuthorizedRelayer
+        private
     {
         // initialize the safe instance
         Safe safeInstance = Safe(safe);
