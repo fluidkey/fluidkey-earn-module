@@ -13,8 +13,8 @@ To generate the encoded calldata for Create3 deploy, run the following command:
 forge script script/Deployer.s.sol <authorized_relayer> <wrapped_native_address> <salt> --sig 'run(address,address,bytes)'
 ```
 
-[!CAUTION]
-Make sure to use the correct wrapped native asset address for the chain you are deploying to as this cannot be changed once the contract is deployed.
+> [!CAUTION]
+> Make sure to use the correct wrapped native asset address for the chain you are deploying to as this cannot be changed once the contract is deployed.
 
 To verify the contract on Etherscan, run the following command:
 ```bash
