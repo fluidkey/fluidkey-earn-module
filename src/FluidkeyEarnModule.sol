@@ -6,7 +6,8 @@ import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import { MessageHashUtils } from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import { MessageHashUtils } from
+    "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /**
  * @title FluidkeyEarnModule
@@ -33,7 +34,7 @@ interface Safe {
         returns (bool success);
 }
 
-interface IWETH {
+interface IWrappedNative {
     function deposit() external payable;
 }
 
@@ -53,12 +54,12 @@ contract FluidkeyEarnModule is Ownable {
 
     uint256 internal constant MAX_TOKENS = 100;
     address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    address public weth;
+    address public wrappedNative;
 
-    constructor(address _authorizedRelayer, address _weth) Ownable(msg.sender) {
+    constructor(address _authorizedRelayer, address _wrappedNative) Ownable(msg.sender) {
         authorizedRelayers[_authorizedRelayer] = true;
         emit AddAuthorizedRelayer(_authorizedRelayer);
-        weth = _weth;
+        wrappedNative = _wrappedNative;
     }
 
     struct ConfigWithToken {
@@ -90,16 +91,18 @@ contract FluidkeyEarnModule is Ownable {
     //////////////////////////////////////////////////////////////////////////*/
 
     /**
-     * Modifier to check if the caller is the authorized relayer
+     * Modifier to check if the caller is an authorized relayer or the owner
      */
     modifier onlyAuthorizedRelayer() {
-        if (!authorizedRelayers[msg.sender] && msg.sender != owner()) revert NotAuthorized(msg.sender);
+        if (!authorizedRelayers[msg.sender] && msg.sender != owner()) {
+            revert NotAuthorized(msg.sender);
+        }
         _;
     }
 
     /**
      * Adds a new authorized relayer
-     * @dev the function will revert if the caller is not the authorized relayer
+     * @dev the function will revert if the caller is not an authorized relayer or the owner
      *
      * @param newRelayer address of the new relayer
      */
@@ -110,7 +113,7 @@ contract FluidkeyEarnModule is Ownable {
 
     /**
      * Removes an authorized relayer
-     * @dev the function will revert if the caller is not the authorized relayer
+     * @dev the function will revert if the caller is not an authorized relayer or the owner
      *
      * @param relayer address of the relayer to be removed
      */
@@ -271,7 +274,8 @@ contract FluidkeyEarnModule is Ownable {
      * @param token The address of the token to be saved.
      * @param amountToSave The amount of tokens to deposit into the vault.
      * @param safe The address of the Safe from which the transaction is executed.
-     * @param nonce A unique identifier for the transaction, so that 2 txs for same token, safe and amount can be distinguished.
+     * @param nonce A unique identifier for the transaction, so that 2 txs for same token, safe and
+     * amount can be distinguished.
      * @param signature A signature from the relayer verifying the transaction details.
      */
     function autoEarn(
@@ -280,7 +284,9 @@ contract FluidkeyEarnModule is Ownable {
         address safe,
         uint256 nonce,
         bytes memory signature
-    ) external {
+    )
+        external
+    {
         // Ensure the relayer is an authorized one and the signature not already used
         bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe, nonce));
         bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(hash);
@@ -309,7 +315,10 @@ contract FluidkeyEarnModule is Ownable {
         address token,
         uint256 amountToSave,
         address safe
-    ) external onlyAuthorizedRelayer {
+    )
+        external
+        onlyAuthorizedRelayer
+    {
         _autoEarn(token, amountToSave, safe);
     }
 
@@ -321,13 +330,7 @@ contract FluidkeyEarnModule is Ownable {
      * @param amountToSave amount received by the user
      * @param safe address of the user's safe to execute the transaction on
      */
-    function _autoEarn(
-        address token,
-        uint256 amountToSave,
-        address safe
-    )
-        private
-    {
+    function _autoEarn(address token, uint256 amountToSave, address safe) private {
         // initialize the safe instance
         Safe safeInstance = Safe(safe);
 
@@ -347,9 +350,12 @@ contract FluidkeyEarnModule is Ownable {
         // if token is ETH, wrap it
         if (token == address(ETH)) {
             safeInstance.execTransactionFromModule(
-                address(weth), amountToSave, abi.encodeWithSelector(IWETH.deposit.selector), 0
+                address(wrappedNative),
+                amountToSave,
+                abi.encodeWithSelector(IWrappedNative.deposit.selector),
+                0
             );
-            tokenToSave = IERC20(weth);
+            tokenToSave = IERC20(wrappedNative);
         } else {
             tokenToSave = IERC20(token);
         }
