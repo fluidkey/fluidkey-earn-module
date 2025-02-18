@@ -9,5 +9,3 @@ docs/
 # Dotenv file
 .env
 node_modules
-.idea
-.DS_Store
