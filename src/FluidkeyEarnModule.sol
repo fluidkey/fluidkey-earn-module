@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
-import { SentinelListLib, SENTINEL } from "sentinellist/SentinelList.sol";
+import { SentinelListLib, SENTINEL, ZERO_ADDRESS } from "sentinellist/SentinelList.sol";
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import { MessageHashUtils } from
@@ -46,15 +46,17 @@ contract FluidkeyEarnModule is Ownable {
     //////////////////////////////////////////////////////////////////////////*/
 
     error TooManyTokens();
+    error EmptyConfigList();
     error ModuleNotInitialized(address account);
+    error ModuleAlreadyInitialized(address account);
     error NotAuthorized(address relayer);
     error ConfigNotFound(address token);
     error CannotRemoveSelf();
     error SignatureAlreadyUsed();
 
     uint256 internal constant MAX_TOKENS = 100;
-    address public immutable ETH = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    address public wrappedNative;
+    address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address public immutable wrappedNative;
 
     constructor(address _authorizedRelayer, address _wrappedNative) Ownable(msg.sender) {
         authorizedRelayers[_authorizedRelayer] = true;
@@ -84,6 +86,7 @@ contract FluidkeyEarnModule is Ownable {
     event ModuleInitialized(address indexed account);
     event ModuleUninitialized(address indexed account);
     event ConfigSet(address indexed account, address indexed token);
+    event ConfigDeleted(address indexed account, address indexed token);
     event AutoEarnExecuted(address indexed smartAccount, address indexed token, uint256 amountIn);
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -133,17 +136,23 @@ contract FluidkeyEarnModule is Ownable {
         // cache the account address
         address account = msg.sender;
 
+        // check that the module is not already initialized
+        if (isInitialized(account)) revert ModuleAlreadyInitialized(account);
+
         // decode the data to get the tokens and their configurations
         (ConfigWithToken[] memory _configs) = abi.decode(data, (ConfigWithToken[]));
-
-        // initialize the sentinel list
-        tokens[account].init();
 
         // get the length of the tokens
         uint256 length = _configs.length;
 
+        // check that the config list is not empty
+        if (length == 0) revert EmptyConfigList();
+
         // check that the length of tokens is less than max
         if (length > MAX_TOKENS) revert TooManyTokens();
+
+        // initialize the sentinel list
+        tokens[account].init();
 
         // loop through the tokens, add them to the list and set their configurations
         for (uint256 i; i < length; i++) {
@@ -199,8 +208,13 @@ contract FluidkeyEarnModule is Ownable {
     function setConfig(address token, address vault) public {
         // cache the account address
         address account = msg.sender;
+
         // check if the module is not initialized and revert if it is not
         if (!isInitialized(account)) revert ModuleNotInitialized(account);
+
+        // check that MAX_TOKENS is not exceeded
+        (, address next) = tokens[account].getEntriesPaginated(SENTINEL, MAX_TOKENS - 1);
+        if (next != SENTINEL && next != ZERO_ADDRESS) revert TooManyTokens();
 
         // set the configuration for the token
         config[account][token] = vault;
@@ -217,7 +231,8 @@ contract FluidkeyEarnModule is Ownable {
      * Deletes the configuration for a token
      * @dev the function will revert if the module is not initialized
      *
-     * @param prevToken address of the token stored before the token to be deleted
+     * @param prevToken address of the token stored before the token to be deleted in the linked
+     * list, if the token is the first in the list, this should be the SENTINEL
      * @param token address of the token to be deleted
      */
     function deleteConfig(address prevToken, address token) public {
@@ -230,7 +245,7 @@ contract FluidkeyEarnModule is Ownable {
         // remove the token from the list
         tokens[account].pop(prevToken, token);
 
-        emit ConfigSet(account, token);
+        emit ConfigDeleted(account, token);
     }
 
     /**
@@ -251,7 +266,7 @@ contract FluidkeyEarnModule is Ownable {
      * @param account address of the account
      */
     function getAllConfigs(address account) external view returns (ConfigWithToken[] memory) {
-        address[] memory tokensArray = this.getTokens(account);
+        (address[] memory tokensArray,) = tokens[account].getEntriesPaginated(SENTINEL, MAX_TOKENS);
         ConfigWithToken[] memory configsArray = new ConfigWithToken[](tokensArray.length);
 
         for (uint256 i; i < tokensArray.length; i++) {
@@ -288,7 +303,7 @@ contract FluidkeyEarnModule is Ownable {
         external
     {
         // Ensure the relayer is an authorized one and the signature not already used
-        bytes32 hash = keccak256(abi.encodePacked(token, amountToSave, safe, nonce));
+        bytes32 hash = keccak256(abi.encodePacked(block.chainid, token, amountToSave, safe, nonce));
         bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(hash);
         if (executedHashes[ethSignedHash]) {
             revert SignatureAlreadyUsed();
@@ -348,13 +363,16 @@ contract FluidkeyEarnModule is Ownable {
         IERC20 tokenToSave;
 
         // if token is ETH, wrap it
-        if (token == address(ETH)) {
-            safeInstance.execTransactionFromModule(
+        if (token == NATIVE_TOKEN) {
+            bool wrappingSuccess = safeInstance.execTransactionFromModule(
                 address(wrappedNative),
                 amountToSave,
                 abi.encodeWithSelector(IWrappedNative.deposit.selector),
                 0
             );
+            if (!wrappingSuccess) {
+                revert("Failed to wrap native token");
+            }
             tokenToSave = IERC20(wrappedNative);
         } else {
             tokenToSave = IERC20(token);

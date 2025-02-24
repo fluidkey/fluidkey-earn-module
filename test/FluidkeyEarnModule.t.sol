@@ -27,8 +27,8 @@ contract FluidkeyEarnModuleTest is Test {
     IERC4626 public RE7_USDC_ERC4626 = IERC4626(0x12AFDeFb2237a5963e7BAb3e2D46ad0eee70406e);
     IERC4626 public GAUNTLET_WETH_ERC4626 = IERC4626(0x6b13c060F13Af1fdB319F52315BbbF3fb1D88844);
     IERC4626 public STEAKHOUSE_USDC_ERC4626 = IERC4626(0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183);
-    uint256 constant RELAYER_PRIVATE_KEY = 0x35383d0f6ff2fa6b3f8de5425f4d6227b20d1a7a02bff9b00e9458db39e07e28;
-
+    uint256 constant RELAYER_PRIVATE_KEY =
+        0x35383d0f6ff2fa6b3f8de5425f4d6227b20d1a7a02bff9b00e9458db39e07e28;
 
     address internal owner;
     address[] internal ownerAddresses;
@@ -216,10 +216,10 @@ contract FluidkeyEarnModuleTest is Test {
 
         // Sign the message with the authorized relayer's key
         uint256 nonce = 1234;
-        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(100_000_000), safe, nonce));
-        bytes32 ethHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        bytes32 hash = keccak256(
+            abi.encodePacked(uint256(8453), address(USDC), uint256(100_000_000), safe, nonce)
         );
+        bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(RELAYER_PRIVATE_KEY, ethHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -238,11 +238,12 @@ contract FluidkeyEarnModuleTest is Test {
 
         // Sign with a different private key (unauthorized)
         uint256 nonce = 1234;
-        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(50_000_000), safe, nonce));
-        bytes32 ethHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        bytes32 hash = keccak256(
+            abi.encodePacked(uint256(8453), address(USDC), uint256(50_000_000), safe, nonce)
         );
-        uint256 UNAUTHORIZED_PRIVATE_KEY = 0x491fa4c92337d0a76cb0323e71e88ec4073e0fd9770ec97e9a6196a39e4a7d01;
+        bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+        uint256 UNAUTHORIZED_PRIVATE_KEY =
+            0x491fa4c92337d0a76cb0323e71e88ec4073e0fd9770ec97e9a6196a39e4a7d01;
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(UNAUTHORIZED_PRIVATE_KEY, ethHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -264,10 +265,10 @@ contract FluidkeyEarnModuleTest is Test {
 
         // Create a valid signature from authorized relayer
         uint256 nonce = 1234;
-        bytes32 hash = keccak256(abi.encodePacked(address(USDC), uint256(10_000_000), safe, nonce));
-        bytes32 ethHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+        bytes32 hash = keccak256(
+            abi.encodePacked(uint256(8453), address(USDC), uint256(10_000_000), safe, nonce)
         );
+        bytes32 ethHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(RELAYER_PRIVATE_KEY, ethHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
