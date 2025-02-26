@@ -212,17 +212,16 @@ contract FluidkeyEarnModule is Ownable {
         // check if the module is not initialized and revert if it is not
         if (!isInitialized(account)) revert ModuleNotInitialized(account);
 
-        // check that MAX_TOKENS is not exceeded
-        (, address next) = tokens[account].getEntriesPaginated(SENTINEL, MAX_TOKENS - 1);
-        if (next != SENTINEL && next != ZERO_ADDRESS) revert TooManyTokens();
+        // check that MAX_TOKENS is not exceeded if the token is not already in the list, then add
+        // the token to the list
+        if (!tokens[account].contains(token)) {
+            (, address next) = tokens[account].getEntriesPaginated(SENTINEL, MAX_TOKENS - 1);
+            if (next != SENTINEL && next != ZERO_ADDRESS) revert TooManyTokens();
+            tokens[account].push(token);
+        }
 
         // set the configuration for the token
         config[account][token] = vault;
-
-        // add the token to the list if it is not already there
-        if (!tokens[account].contains(token)) {
-            tokens[account].push(token);
-        }
 
         emit ConfigSet(account, token);
     }
