@@ -58,7 +58,7 @@ contract FluidkeyEarnModule is Ownable {
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address public immutable wrappedNative;
 
-    constructor(address _authorizedRelayer, address _wrappedNative) Ownable(msg.sender) {
+    constructor(address _authorizedRelayer, address _wrappedNative, address _owner) Ownable(_owner) {
         authorizedRelayers[_authorizedRelayer] = true;
         emit AddAuthorizedRelayer(_authorizedRelayer);
         wrappedNative = _wrappedNative;
