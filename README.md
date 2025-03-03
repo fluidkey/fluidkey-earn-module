@@ -4,9 +4,10 @@ The Fluidkey Savings Module is a Safe module that allows Fluidkey to automatical
 
 ## Deployment
 
-* Salt: `f10ed4ee` (production) and `de4e` (development)
-* Create3 factory: `0x9fbb3df7c40da2e5a0de984ffe2ccb7c47cd0abf`
-* Create3 deployer: `0x9E3eba321427941868cB4123De97DAB145C9e7CD`
+* Salt: `f10ed4ee` (production) and `de4e` (development) with padding before
+* Create3 factory: `0x4088E5933b8260ff2D9CA5CED4Bb796482A660f0`
+* Owner: `0x9E3eba321427941868cB4123De97DAB145C9e7CD`
+* Address: `0x74995e1075f1b0c308efacc56520d14e4954da6f` (production) and `0x63234d98a126b923a4570f516c064f05b135e00a` (development)
 
 To deploy using the Create3 factory, first ensure you have set up your environment variables:
 ```bash
@@ -24,7 +25,7 @@ forge script script/Deployer.s.sol \
     <authorized_relayer> \
     <wrapped_native_address> \
     <owner> \
-    0xde4e
+    <salt>
 ```
 
 
