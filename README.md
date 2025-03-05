@@ -1,6 +1,10 @@
-## Fluidkey Savings Module
+## Fluidkey Earn Module
 
-The Fluidkey Savings Module is a Safe module that allows Fluidkey to automatically deposit funds into an ERC-4626 vault on behalf of the Safe. It is based on the [AutoSavings module](https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol) authored by Rhinestone.
+The Fluidkey Earn Module is a Safe module that allows Fluidkey to automatically deposit funds into an ERC-4626 vault on behalf of the Safe. It is based on the [AutoSavings module](https://github.com/rhinestonewtf/core-modules/blob/main/src/AutoSavings/AutoSavings.sol) authored by Rhinestone.
+
+## Audit
+
+The Fluidkey Earn Module has successfully been audited by Ackee in March 2025. The audit report can be found [here](/audits/ackee-blockchain-fluidkey-earn-module-report.pdf).
 
 ## Deployment
 
@@ -28,14 +32,13 @@ forge script script/Deployer.s.sol \
     <salt>
 ```
 
-
 > [!CAUTION]
 > Make sure to use the correct wrapped native asset address for the chain you are deploying to as this cannot be changed once the contract is deployed.
 
 To verify the contract on Etherscan, run the following command:
 ```bash
 forge verify-contract \
-    --chain-id 8453 \
+    --chain-id <chain_id> \
     --num-of-optimizations 200 \
     --watch \
     --constructor-args $(cast abi-encode "constructor(address,address,address)" <authorized_relayer> <wrapped_native_address> <owner>) \
