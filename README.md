@@ -32,8 +32,30 @@ forge script script/Deployer.s.sol \
     <salt>
 ```
 
+The script will output:
+- The bytecode hash of the module
+- The expected address of the CREATE3Factory
+- The calldata for deploying the FluidkeyEarnModule via the CREATE3Factory
+
+This calldata can then be used in a Safe transaction or other wallet to perform the actual deployment.
+
 > [!CAUTION]
 > Make sure to use the correct wrapped native asset address for the chain you are deploying to as this cannot be changed once the contract is deployed.
+
+## Configuration
+
+To generate the calldata for setting or updating vault configurations in the Fluidkey Earn Module:
+
+```bash
+forge script script/ConfigSetter.s.sol -vvv
+```
+
+The script output includes:
+- The complete calldata for the `setConfig` method
+- The configuration hash in both decimal and hex format 
+- The calldata needed for the `onInstall` method when installing the module on a Safe
+
+## Contract Verification
 
 To verify the contract on Etherscan, run the following command:
 ```bash
