@@ -13,7 +13,6 @@ contract ConfigSetterScript is Script {
 
         // Calculate configHash
         bytes32 rawHash = keccak256(abi.encode(configs));
-        uint256 configHash = uint256(rawHash);
 
         // Encode the calldata for setConfig
         bytes memory callData = abi.encodeWithSelector(
@@ -23,7 +22,6 @@ contract ConfigSetterScript is Script {
 
         // Print info
         console.log("Number of configurations:", configs.length);
-        console.log("configHash (decimal):", configHash);
         console.log("configHash (hex):");
         console.logBytes32(rawHash);
 
