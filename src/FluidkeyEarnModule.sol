@@ -101,7 +101,7 @@ contract FluidkeyEarnModule is Ownable {
     event RemoveAuthorizedRelayer(address indexed relayer);
 
     /// @dev Emitted when the module is initialized (installed) on a Safe
-    event ModuleInitialized(address indexed account, uint256 configHash);
+    event ModuleInitialized(address indexed account);
 
     /// @dev Emitted when the module is uninstalled
     event ModuleUninitialized(address indexed account);
@@ -256,7 +256,8 @@ contract FluidkeyEarnModule is Ownable {
 
         accountConfig[account] = configHash_;
 
-        emit ModuleInitialized(account, configHash_);
+        emit ModuleInitialized(account);
+        emit ConfigHashChanged(account, 0x0, configHash_);
     }
 
     /**
