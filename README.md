@@ -8,10 +8,12 @@ The Fluidkey Earn Module has successfully been audited by Ackee in March 2025. T
 
 ## Deployment
 
-* Salt: `f10ed4ee` (production) and `de4e` (development) with padding before
-* Create3 factory: `0x4088E5933b8260ff2D9CA5CED4Bb796482A660f0`
+* Salt: `0x10000000000000000000000000000000000000000000000000000000f10ed4ee` (production)
+    and `0x100000000000000000000000000000000000000000000000000000000000de4e` (development)
+* Create3 factory: `` (production)
+    and `0x94FF96E920964cAb500e898eC4F2a8E3CEA5a7c6` (development)
 * Owner: `0x9E3eba321427941868cB4123De97DAB145C9e7CD`
-* Address: `0x74995e1075f1b0c308efacc56520d14e4954da6f` (production) and `0x63234d98a126b923a4570f516c064f05b135e00a` (development)
+* Address: `0x3BDb857AFe9b51d8916D80240d2ADe40D4d3f2f9` (production) and `0x5A05781eE63E38A11707b3A688F8C2b02413E0eD` (development)
 
 To deploy using the Create3 factory, first ensure you have set up your environment variables:
 ```bash
@@ -32,7 +34,7 @@ forge script script/Deployer.s.sol \
     <salt>
 ```
 
-The script will output:
+The script, on top of deploying the CREATE3Factory, will output:
 - The bytecode hash of the module
 - The expected address of the CREATE3Factory
 - The calldata for deploying the FluidkeyEarnModule via the CREATE3Factory

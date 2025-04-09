@@ -9,6 +9,7 @@ import { FluidkeyEarnModule } from "../src/FluidkeyEarnModule.sol";
  */
 library FluidkeyBaseConfig {
     // Chain IDs
+    uint256 constant CHAIN_ID_MAINNET = 1;
     uint256 constant CHAIN_ID_BASE = 8453;
     uint256 constant CHAIN_ID_POLYGON = 137;
     uint256 constant CHAIN_ID_ARBITRUM = 42161;
@@ -25,7 +26,7 @@ library FluidkeyBaseConfig {
     function getAllConfigs() internal pure returns (FluidkeyEarnModule.ConfigInput[] memory) {
         // Initialize array with the total number of configs from the CSV
         // TODO - remember to update the array lenght when adding new configs
-        FluidkeyEarnModule.ConfigInput[] memory configs = new FluidkeyEarnModule.ConfigInput[](30);
+        FluidkeyEarnModule.ConfigInput[] memory configs = new FluidkeyEarnModule.ConfigInput[](38);
         
         uint256 index = 0;
 
@@ -238,10 +239,67 @@ library FluidkeyBaseConfig {
         });
 
         // Aave DAI on Optimism
-        configs[index] = FluidkeyEarnModule.ConfigInput({
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_OPTIMISM,
             token: 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1, // DAI
             vault: 0x6dDc64289bE8a71A707fB057d5d07Cc756055d6e // Aave DAI
+        });
+        
+        // AAVE wBTC on Optimism
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_OPTIMISM,
+            token: 0x68f180fcCe6836688e9084f035309E29Bf0A2095, // wBTC
+            vault: 0x6d998FeEFC7B3664eaD09CAf02b5a0fc2E365F18 // Aave wBTC
+        });
+
+        // Mainnet Chain Configs
+        // Gauntlet USDC Prime on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, // USDC
+            vault: 0xdd0f28e19C1780eb6396170735D45153D261490d // Gauntlet USDC Prime
+        });
+
+        // Gauntlet USDT Prime on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0xdAC17F958D2ee523a2206206994597C13D831ec7, // USDT
+            vault: 0x8CB3649114051cA5119141a34C200D65dc0Faa73 // Gauntlet USDT Prime
+        });
+
+        // Gauntlet wETH Prime on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, // wETH
+            vault: 0x2371e134e3455e0593363cBF89d3b6cf53740618 // Gauntlet wETH Prime
+        });
+
+        // Gauntlet wETH Prime for ETH (native) on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: NATIVE_TOKEN, // ETH
+            vault: 0x2371e134e3455e0593363cBF89d3b6cf53740618 // Gauntlet wETH Prime
+        });
+
+        // Gauntlet DAI Core on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0x6B175474E89094C44Da98b954EedeAC495271d0F, // DAI
+            vault: 0x500331c9fF24D9d11aee6B07734Aa72343EA74a5 // Gauntlet DAI Core
+        });
+
+        // Gauntlet wBTC Core on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599, // wBTC
+            vault: 0x443df5eEE3196e9b2Dd77CaBd3eA76C3dee8f9b2 // Gauntlet wBTC Core
+        });
+
+        // Gauntlet cbBTC Core on Mainnet
+        configs[index] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf, // cbBTC
+            vault: 0xF587f2e8AfF7D76618d3B6B4626621860FbD54e3 // Gauntlet cbBTC Core
         });
 
         return configs;

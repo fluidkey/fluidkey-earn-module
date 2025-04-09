@@ -26,7 +26,7 @@ contract DeploymentScript is Script {
 
         // Try to deploy CREATE3Factory, catch if already deployed
         CREATE3Factory factory;
-        try new CREATE3Factory{salt: bytes32(0)}(bytecodeHash) returns (CREATE3Factory newFactory) {
+        try new CREATE3Factory{salt: salt}(bytecodeHash) returns (CREATE3Factory newFactory) {
             factory = newFactory;
             console.log("CREATE3Factory deployed at:", address(factory));
         } catch {
