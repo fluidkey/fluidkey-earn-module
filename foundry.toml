@@ -1,5 +1,8 @@
 [profile.default]
-emv_version = "shanghai"
+solc_version = "0.8.23"
+optimizer = true
+optimizer_runs = 200
+evm_version = "paris"
 src = "src"
 out = "out"
 script = "script"
