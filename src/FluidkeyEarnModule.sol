@@ -4,9 +4,9 @@ pragma solidity ^0.8.23;
 import { IERC20 } from "forge-std/interfaces/IERC20.sol";
 import { IERC4626 } from "forge-std/interfaces/IERC4626.sol";
 import { SentinelListLib, SENTINEL, ZERO_ADDRESS } from "sentinellist/SentinelList.sol";
-import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import { ECDSA } from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-import { MessageHashUtils } from "openzeppelin-contracts/contracts/utils/cryptography/MessageHashUtils.sol";
+import { Ownable } from "openzeppelin-contracts/access/Ownable.sol";
+import { ECDSA } from "openzeppelin-contracts/utils/cryptography/ECDSA.sol";
+import { MessageHashUtils } from "openzeppelin-contracts/utils/cryptography/MessageHashUtils.sol";
 
 
 interface Safe {

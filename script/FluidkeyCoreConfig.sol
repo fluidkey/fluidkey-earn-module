@@ -4,10 +4,10 @@ pragma solidity ^0.8.13;
 import { FluidkeyEarnModule } from "../src/FluidkeyEarnModule.sol";
 
 /**
- * @title FluidkeyBaseonfig
+ * @title FluidkeyCoreConfig
  * @dev Contains the configuration for FluidkeyEarnModule across different chains
  */
-library FluidkeyBaseConfig {
+library FluidkeyCoreConfig {
     // Chain IDs
     uint256 constant CHAIN_ID_MAINNET = 1;
     uint256 constant CHAIN_ID_BASE = 8453;
@@ -25,8 +25,8 @@ library FluidkeyBaseConfig {
      */
     function getAllConfigs() internal pure returns (FluidkeyEarnModule.ConfigInput[] memory) {
         // Initialize array with the total number of configs from the CSV
-        // TODO - remember to update the array lenght when adding new configs
-        FluidkeyEarnModule.ConfigInput[] memory configs = new FluidkeyEarnModule.ConfigInput[](38);
+        // TODO - remember to update the array length when adding new configs
+        FluidkeyEarnModule.ConfigInput[] memory configs = new FluidkeyEarnModule.ConfigInput[](41);
         
         uint256 index = 0;
 
@@ -157,6 +157,13 @@ library FluidkeyBaseConfig {
             chainId: CHAIN_ID_ARBITRUM,
             token: 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f, // wBTC
             vault: 0x32B95Fbe04e5a51cF99FeeF4e57Cf7e3FC9c5A93 // Aave wBTC
+        });
+
+        // Aave GHO on Arbitrum
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_ARBITRUM,
+            token: 0x7dfF72693f6A4149b17e7C6314655f6A9F7c8B33, // GHO
+            vault: 0xD9FBA68D89178e3538e708939332c79efC540179 // Aave GHO
         });
 
         // Gnosis Chain Configs
@@ -296,10 +303,24 @@ library FluidkeyBaseConfig {
         });
 
         // Gauntlet cbBTC Core on Mainnet
-        configs[index] = FluidkeyEarnModule.ConfigInput({
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf, // cbBTC
             vault: 0xF587f2e8AfF7D76618d3B6B4626621860FbD54e3 // Gauntlet cbBTC Core
+        });
+
+        // Gauntlet EURC Core on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c, // EURC
+            vault: 0x2ed10624315b74a78f11FAbedAa1A228c198aEfB // Gauntlet EURC Core
+        });
+
+        // fxSAVE on Mainnet
+        configs[index++] = FluidkeyEarnModule.ConfigInput({
+            chainId: CHAIN_ID_MAINNET,
+            token: 0x085780639CC2cACd35E474e71f4d000e2405d8f6, // fxUSD
+            vault: 0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39 // fxSAVE
         });
 
         return configs;
