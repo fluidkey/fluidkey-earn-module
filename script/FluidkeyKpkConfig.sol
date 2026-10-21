@@ -41,25 +41,25 @@ library FluidkeyKpkConfig {
             vault: 0x7C29B2699a508831D444730cD34d99e0aD2D2624 // fluidkeyUSDCy (KPK)
         });
 
-        // Gauntlet EURC Core on Base
+        // Gauntlet EURC Balanced on Base
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_BASE,
             token: 0x60a3E35Cc302bFA44Cb288Bc5a4F316Fdb1adb42, // EURC
-            vault: 0x1c155be6bC51F2c37d472d4C2Eba7a637806e122 // Gauntlet EURC Core
+            vault: 0x94Af495DE1F56Aa5576dEB17986bDCeE5Dd9778D // Gauntlet EURC Balanced (Morpho v2.0)
         });
 
-        // Gauntlet WETH Core on Base
+        // Gauntlet WETH Balanced on Base
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_BASE,
             token: 0x4200000000000000000000000000000000000006, // WETH
-            vault: 0x6b13c060F13Af1fdB319F52315BbbF3fb1D88844 // Gauntlet WETH Core
+            vault: 0xFeFeC33668E22677c4762d0853d56245a800ff08 // Gauntlet WETH Balanced (Morpho v2.0)
         });
 
-        // Gauntlet WETH Core for ETH (native) on Base
+        // Gauntlet WETH Balanced for ETH (native) on Base
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_BASE,
             token: NATIVE_TOKEN, // ETH
-            vault: 0x6b13c060F13Af1fdB319F52315BbbF3fb1D88844 // Gauntlet WETH Core
+            vault: 0xFeFeC33668E22677c4762d0853d56245a800ff08 // Gauntlet WETH Balanced (Morpho v2.0)
         });
 
         // Gauntlet cbBTC Core on Base
@@ -267,35 +267,35 @@ library FluidkeyKpkConfig {
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48, // USDC
-            vault: 0xdd0f28e19C1780eb6396170735D45153D261490d // Gauntlet USDC Prime
+            vault: 0x8c106EEDAd96553e64287A5A6839c3Cc78afA3D0 // Gauntlet USDC Prime (Morpho v2.0)
         });
 
         // Gauntlet USDT Prime on Mainnet
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: 0xdAC17F958D2ee523a2206206994597C13D831ec7, // USDT
-            vault: 0x8CB3649114051cA5119141a34C200D65dc0Faa73 // Gauntlet USDT Prime
+            vault: 0xf3557AD5E984211ac8A0874A670344f2C3376471 // Gauntlet USDT Prime (Morpho v2.0)
         });
 
-        // Gauntlet wETH Prime on Mainnet
+        // Gauntlet WETH Prime on Mainnet
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, // wETH
-            vault: 0x2371e134e3455e0593363cBF89d3b6cf53740618 // Gauntlet wETH Prime
+            vault: 0x43fCd85E8D9D003D515f886891B7C742AC9f92da // Gauntlet WETH Prime (Morpho v2.0)
         });
 
-        // Gauntlet wETH Prime for ETH (native) on Mainnet
+        // Gauntlet WETH Prime for ETH (native) on Mainnet
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: NATIVE_TOKEN, // ETH
-            vault: 0x2371e134e3455e0593363cBF89d3b6cf53740618 // Gauntlet wETH Prime
+            vault: 0x43fCd85E8D9D003D515f886891B7C742AC9f92da // Gauntlet WETH Prime (Morpho v2.0)
         });
 
-        // Gauntlet DAI Core on Mainnet
+        // Aave DAI on Mainnet
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: 0x6B175474E89094C44Da98b954EedeAC495271d0F, // DAI
-            vault: 0x500331c9fF24D9d11aee6B07734Aa72343EA74a5 // Gauntlet DAI Core
+            vault: 0xaf270C38fF895EA3f95Ed488CEACe2386F038249 // Aave DAI
         });
 
         // Gauntlet wBTC Core on Mainnet
@@ -316,7 +316,7 @@ library FluidkeyKpkConfig {
         configs[index++] = FluidkeyEarnModule.ConfigInput({
             chainId: CHAIN_ID_MAINNET,
             token: 0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c, // EURC
-            vault: 0x2ed10624315b74a78f11FAbedAa1A228c198aEfB // Gauntlet EURC Core
+            vault: 0x842A84Df61DbE701c5dAE345F3f8E64aF727E48C // Gauntlet EURC Core (Morpho v2.0)
         });
 
         // fxSAVE on Mainnet

@@ -5,7 +5,6 @@ import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
 import {FluidkeyEarnModule} from "../src/FluidkeyEarnModule.sol";
 import {FluidkeyCoreConfig} from "./FluidkeyCoreConfig.sol";
-import {FluidkeyOptimizedConfig} from "./FluidkeyOptimizedConfig.sol";
 import {FluidkeyKpkConfig} from "./FluidkeyKpkConfig.sol";
 import {FluidkeyInfinifiConfig} from "./FluidkeyInfinifiConfig.sol";
 
@@ -30,25 +29,6 @@ contract ConfigSetterScript is Script {
 
         console.log("\nCalldata for setConfig for Core:");
         console.logBytes(callData);
-
-        // Get the full array of configs for Optimized config
-        FluidkeyEarnModule.ConfigInput[] memory optimizedConfigs = FluidkeyOptimizedConfig.getAllConfigs();
-        // Calculate configHash
-        bytes32 rawHashOptimizedConfig = keccak256(abi.encode(optimizedConfigs));
-
-        // Encode the calldata for setConfig
-        bytes memory callDataOptimizedConfig = abi.encodeWithSelector(
-            FluidkeyEarnModule.setConfig.selector,
-            optimizedConfigs
-        );
-
-        // Print info
-        console.log("Number of configurations for Optimized:", optimizedConfigs.length);
-        console.log("configHash for Optimized (hex):");
-        console.logBytes32(rawHashOptimizedConfig);
-
-        console.log("\nCalldata for setConfig for Optimized:");
-        console.logBytes(callDataOptimizedConfig);
 
         // Get the full array of configs for KPK config
         FluidkeyEarnModule.ConfigInput[] memory kpkConfigs = FluidkeyKpkConfig.getAllConfigs();
